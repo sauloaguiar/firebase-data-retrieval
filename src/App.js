@@ -1,10 +1,59 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 import { db } from "./db"; // Import this line to use the Firestore database connection
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { useDebounce } from "use-debounce";
 
 const noticesCollection = collection(db, "notices");
+
+function SearchBar({ filterText, onChange }) {
+  return (
+    <form>
+      <input
+        type="text"
+        placeholder="Search..."
+        value={filterText}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </form>
+  );
+}
+
+function NoticeRow({ notice }) {
+  return (
+    <tr>
+      <td>{notice.title}</td>
+      <td>{notice.publicationDate.toDate().toDateString()}</td>
+    </tr>
+  );
+}
+
+function NoticeTable({ notices }) {
+  const entries = [];
+  notices.forEach((notice) => {
+    entries.push(<NoticeRow notice={notice} key={notice.id} />);
+  });
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Published Date</th>
+        </tr>
+      </thead>
+      <tbody>{entries}</tbody>
+    </table>
+  );
+}
+
+function PublishedNotices({ notices, searchText, onSearchChange }) {
+  return (
+    <main>
+      <SearchBar filterText={searchText} onChange={onSearchChange} />
+      <NoticeTable notices={notices} />
+    </main>
+  );
+}
 
 function App() {
   const [notices, setNotices] = useState([]);
@@ -13,7 +62,7 @@ function App() {
 
   useEffect(() => {
     const fetchNotices = async () => {
-      console.log("intput", debouncedInput);
+      console.log("input", debouncedInput);
       const q = query(
         noticesCollection,
         where("title", ">=", debouncedInput),
@@ -35,22 +84,11 @@ function App() {
   // add pagination to the query
 
   return (
-    <div>
-      <div>
-        <input
-          type="text"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-        />
-      </div>
-      <ul>
-        {notices.map((notice) => (
-          <li key={notice.id}>
-            {notice.title} - {notice.publicationDate.toDate().toDateString()}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <PublishedNotices
+      notices={notices}
+      searchText={input}
+      onSearchChange={(value) => setInput(value)}
+    />
   );
 }
 
