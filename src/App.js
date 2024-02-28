@@ -1,7 +1,14 @@
 import React, { useEffect, useReducer } from "react";
 import "./App.css";
 import { db } from "./db"; // Import this line to use the Firestore database connection
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  limit,
+} from "firebase/firestore";
 import { useDebounce } from "use-debounce";
 
 const noticesCollection = collection(db, "notices");
@@ -77,13 +84,21 @@ const noticeReducer = (state, action) => {
       return { ...state, status: action.type, error: "" };
     }
     case "success": {
-      return { ...state, status: action.type, notices: action.payload };
+      return {
+        ...state,
+        status: action.type,
+        notices: action.payload,
+        lastVisible: action.payload.length - 1,
+      };
     }
     case "error": {
       return { ...state, status: action.type, error: action.error.message };
     }
     case "input": {
       return { ...state, input: action.payload };
+    }
+    case "updateLastVisible": {
+      return { ...state, lastVisible: action.payload };
     }
     default: {
       return state;
@@ -96,11 +111,13 @@ const initialNoticeScreenState = {
   notices: [],
   input: "",
   error: "",
+  lastVisible: 0,
+  pageSize: 5,
 };
 
 function App() {
   const [state, dispatch] = useReducer(noticeReducer, initialNoticeScreenState);
-  const { input } = state;
+  const { input, lastVisible, pageSize } = state;
   const [debouncedInput] = useDebounce(input, 500);
 
   useEffect(() => {
@@ -111,9 +128,9 @@ function App() {
         noticesCollection,
         where("title", ">=", debouncedInput),
         where("title", "<", `${debouncedInput}z`),
-        orderBy("publicationDate", "asc")
+        orderBy("publicationDate", "asc"),
+        limit(pageSize)
         // startAfter(lastVisible),
-        // limit(pageSize)
       );
       try {
         const results = await getDocs(q);
@@ -135,7 +152,7 @@ function App() {
   // add debounce to input field
   // add sorting to the query
   // add pagination to the query
-
+  console.log("lastVisible", lastVisible);
   return (
     <PublishedNotices
       state={state}
