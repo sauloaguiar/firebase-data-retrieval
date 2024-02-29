@@ -8,6 +8,8 @@ import {
   orderBy,
   getDocs,
   limit,
+  startAfter,
+  getCountFromServer,
 } from "firebase/firestore";
 import { useDebounce } from "use-debounce";
 
@@ -51,10 +53,12 @@ function NoticeTable({ notices, status }) {
     );
   }
 
-  const entries = [];
-  notices.forEach((notice) => {
-    entries.push(<NoticeRow notice={notice} key={notice.id} />);
-  });
+  const entries = notices
+    .map((doc) => ({
+      ...doc.data(),
+      id: doc.id,
+    }))
+    .map((notice) => <NoticeRow notice={notice} key={notice.id} />);
   return (
     <table>
       <thead>
@@ -100,6 +104,9 @@ const noticeReducer = (state, action) => {
     case "updateLastVisible": {
       return { ...state, lastVisible: action.payload };
     }
+    case "updateCount": {
+      return { ...state, count: action.payload };
+    }
     default: {
       return state;
     }
@@ -112,38 +119,47 @@ const initialNoticeScreenState = {
   input: "",
   error: "",
   lastVisible: 0,
-  pageSize: 5,
+  pageSize: 10,
+  count: 0,
 };
 
 function App() {
   const [state, dispatch] = useReducer(noticeReducer, initialNoticeScreenState);
-  const { input, lastVisible, pageSize } = state;
+  const { notices, input, lastVisible, pageSize, count } = state;
   const [debouncedInput] = useDebounce(input, 500);
 
-  useEffect(() => {
-    const fetchNotices = async () => {
-      dispatch({ type: "loading" });
-      console.log("input", debouncedInput);
-      const q = query(
-        noticesCollection,
-        where("title", ">=", debouncedInput),
-        where("title", "<", `${debouncedInput}z`),
-        orderBy("publicationDate", "asc"),
-        limit(pageSize)
-        // startAfter(lastVisible),
-      );
-      try {
-        const results = await getDocs(q);
-        const notices = results.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
-        }));
+  const fetchNotices = async (loadMore = false) => {
+    dispatch({ type: "loading" });
+    console.log("input", debouncedInput);
 
-        dispatch({ type: "success", payload: notices });
-      } catch (error) {
-        dispatch({ type: "error", error });
-      }
-    };
+    const pagination = loadMore
+      ? [startAfter(notices[notices.length - 1])]
+      : [];
+
+    const filters = [
+      where("title", ">=", debouncedInput),
+      where("title", "<=", debouncedInput + "\uf8ff"),
+      orderBy("publicationDate", "desc"),
+      ...pagination,
+    ];
+    console.log("filters", filters);
+    const noticesQuery = query(noticesCollection, ...filters, limit(pageSize));
+    // const noticesCount = query(noticesCollection, ...filters);
+    // const totalCount = await getCountFromServer(noticesCount);
+    try {
+      const results = await getDocs(noticesQuery);
+      const notices = results.docs;
+      console.log("notices", notices);
+
+      dispatch({ type: "success", payload: notices });
+      // dispatch({ type: "updateCount", payload: totalCount });
+    } catch (error) {
+      dispatch({ type: "error", error });
+      throw new Error(error);
+    }
+  };
+
+  useEffect(() => {
     fetchNotices();
   }, [debouncedInput]);
 
@@ -152,12 +168,14 @@ function App() {
   // add debounce to input field
   // add sorting to the query
   // add pagination to the query
-  console.log("lastVisible", lastVisible);
   return (
-    <PublishedNotices
-      state={state}
-      onSearchChange={(value) => dispatch({ type: "input", payload: value })}
-    />
+    <div>
+      <PublishedNotices
+        state={state}
+        onSearchChange={(value) => dispatch({ type: "input", payload: value })}
+      />
+      <div onClick={() => fetchNotices(true)}>Load More...</div>
+    </div>
   );
 }
 
