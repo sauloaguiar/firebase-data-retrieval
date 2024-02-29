@@ -12,84 +12,9 @@ import {
   endAt,
 } from "firebase/firestore";
 import { useDebounce } from "use-debounce";
-import { ErrorBoundary } from "react-error-boundary";
+import { PublishedNotices } from "./Components";
 
 const noticesCollection = collection(db, "notices");
-
-function ErrorFallback({ error, resetErrorBoundary }) {
-  return (
-    <div role="alert">
-      <p>Something went wrong:</p>
-      <pre style={{ color: "red" }}>{error.message}</pre>
-      <button onClick={resetErrorBoundary}>Try again</button>
-    </div>
-  );
-}
-
-function SearchBar({ filterText, onChange }) {
-  return (
-    <form>
-      <input
-        type="text"
-        placeholder="Search..."
-        value={filterText}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </form>
-  );
-}
-
-function NoticeRow({ notice }) {
-  return (
-    <tr>
-      <td>{notice.title}</td>
-      <td>{notice.publicationDate.toDate().toDateString()}</td>
-    </tr>
-  );
-}
-
-function NoticeTable({ notices, status }) {
-  if (status === "loading") {
-    return (
-      <div>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  const entries = notices
-    .map((doc) => ({
-      ...doc.data(),
-      id: doc.id,
-    }))
-    .map((notice) => <NoticeRow notice={notice} key={notice.id} />);
-  return (
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Published Date</th>
-        </tr>
-      </thead>
-      <tbody>{entries}</tbody>
-    </table>
-  );
-}
-
-function PublishedNotices({ state, onSearchChange }) {
-  const { status } = state;
-  return (
-    <main>
-      <SearchBar filterText={state.searchText} onChange={onSearchChange} />
-      <ErrorBoundary
-        FallbackComponent={ErrorFallback}
-        onReset={() => onSearchChange("")}
-      >
-        <NoticeTable notices={state.notices} status={status} />
-      </ErrorBoundary>
-    </main>
-  );
-}
 
 const noticeReducer = (state, action) => {
   switch (action.type) {
