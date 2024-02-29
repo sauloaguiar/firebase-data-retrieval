@@ -1,3 +1,18 @@
+# Candidate Notes
+
+Hi there! Thanks for taking the time to review my submission.
+The main challenge that I faced was the pagination using firestore queries. The function `getCountFromServer` wasn't working for me, I was getting a firebase internal error. This is the error message that I got
+
+```@firebase/firestore: Firestore (10.8.0): RestConnection RPC 'RunAggregationQuery' 0x42c6e0d6 failed with error:  {"code":"internal","name":"FirebaseError"} url:  http://127.0.0.1:8080/v1/projects/demo-column-frontend-exercise/databases/(default)/documents:runAggregationQuery request: {"structuredAggregationQuery":{"aggregations":[{"alias":"aggregate_0","count":{}}],"structuredQuery":{"from":[{"collectionId":"notices"}]}}}```
+
+Since I wasn't able to get that fixed, I had to pivot. I ended up using [MUI DataGrid](https://mui.com/x/react-data-grid/) to display the notices list, and I took advantage of the local pagination to meet the requirement.
+
+I focused on meeting the logic/data requirements first, and ended up not having much time to work on the UI.
+
+I'm happy to address any questions that might rise during the review.
+Thanks again!
+
+
 # Column Frontend Exercise
 
 Your task is to create a public notice search application using React. The application should allow users to search for a notice by title and display relevant information. The primary goal is to demonstrate your proficiency in React, state management, and asynchronous data fetching via Firestore.
