@@ -9,7 +9,7 @@ import {
   getDocs,
   limit,
   startAfter,
-  getCountFromServer,
+  endAt,
 } from "firebase/firestore";
 import { useDebounce } from "use-debounce";
 
@@ -92,7 +92,10 @@ const noticeReducer = (state, action) => {
         ...state,
         status: action.type,
         notices: action.payload,
-        lastVisible: action.payload.length - 1,
+        lastVisible: action.payload[action.payload.length - 1]
+          ? action.payload[action.payload.length - 1]
+          : null,
+        firstVisible: action.payload[0] ? action.payload[0] : null,
       };
     }
     case "error": {
@@ -100,9 +103,6 @@ const noticeReducer = (state, action) => {
     }
     case "input": {
       return { ...state, input: action.payload };
-    }
-    case "updateLastVisible": {
-      return { ...state, lastVisible: action.payload };
     }
     case "updateCount": {
       return { ...state, count: action.payload };
@@ -118,63 +118,67 @@ const initialNoticeScreenState = {
   notices: [],
   input: "",
   error: "",
-  lastVisible: 0,
   pageSize: 10,
-  count: 0,
+  lastVisible: null,
+  firstVisible: null,
 };
 
 function App() {
   const [state, dispatch] = useReducer(noticeReducer, initialNoticeScreenState);
-  const { notices, input, lastVisible, pageSize, count } = state;
+  const { input, pageSize, lastVisible, firstVisible } = state;
   const [debouncedInput] = useDebounce(input, 500);
+  const filters = [
+    where("title", ">=", debouncedInput),
+    where("title", "<=", debouncedInput + "\uf8ff"),
+    orderBy("publicationDate", "desc"),
+  ];
 
-  const fetchNotices = async (loadMore = false) => {
-    dispatch({ type: "loading" });
-    console.log("input", debouncedInput);
-
-    const pagination = loadMore
-      ? [startAfter(notices[notices.length - 1])]
-      : [];
-
-    const filters = [
-      where("title", ">=", debouncedInput),
-      where("title", "<=", debouncedInput + "\uf8ff"),
-      orderBy("publicationDate", "desc"),
-      ...pagination,
-    ];
-    console.log("filters", filters);
+  const filterLoad = async () => {
     const noticesQuery = query(noticesCollection, ...filters, limit(pageSize));
-    // const noticesCount = query(noticesCollection, ...filters);
-    // const totalCount = await getCountFromServer(noticesCount);
     try {
-      const results = await getDocs(noticesQuery);
-      const notices = results.docs;
-      console.log("notices", notices);
-
-      dispatch({ type: "success", payload: notices });
-      // dispatch({ type: "updateCount", payload: totalCount });
+      const documents = await getDocs(noticesQuery);
+      dispatch({ type: "success", payload: documents.docs });
     } catch (error) {
       dispatch({ type: "error", error });
       throw new Error(error);
     }
   };
 
+  const nextPage = async () => {
+    const q = query(
+      noticesCollection,
+      ...filters,
+      startAfter(lastVisible),
+      limit(pageSize)
+    );
+    const documents = await getDocs(q);
+    dispatch({ type: "success", payload: documents.docs });
+  };
+
+  const previousPage = async () => {
+    const q = query(
+      noticesCollection,
+      ...filters,
+      endAt(firstVisible),
+      limit(pageSize)
+    );
+    const documents = await getDocs(q);
+    dispatch({ type: "success", payload: documents.docs });
+  };
+
   useEffect(() => {
-    fetchNotices();
+    filterLoad();
   }, [debouncedInput]);
 
-  // define a query and see how results get filtered
-  // add search field to filter results
-  // add debounce to input field
-  // add sorting to the query
-  // add pagination to the query
   return (
     <div>
       <PublishedNotices
         state={state}
         onSearchChange={(value) => dispatch({ type: "input", payload: value })}
       />
-      <div onClick={() => fetchNotices(true)}>Load More...</div>
+
+      <div onClick={() => previousPage()}>Less...</div>
+      <div onClick={() => nextPage()}>More...</div>
     </div>
   );
 }
