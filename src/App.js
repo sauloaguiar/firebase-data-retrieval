@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { useDebounce } from "use-debounce";
 import { PublishedNotices } from "./Components";
+import Container from "@mui/material/Container";
 
 const noticesCollection = collection(db, "notices");
 
@@ -68,7 +69,7 @@ function App() {
   ];
 
   const filterLoad = async () => {
-    const noticesQuery = query(noticesCollection, ...filters, limit(pageSize));
+    const noticesQuery = query(noticesCollection, ...filters);
     try {
       const documents = await getDocs(noticesQuery);
       dispatch({ type: "success", payload: documents.docs });
@@ -78,23 +79,13 @@ function App() {
   };
 
   const nextPage = async () => {
-    const q = query(
-      noticesCollection,
-      ...filters,
-      startAfter(lastVisible),
-      limit(pageSize)
-    );
+    const q = query(noticesCollection, ...filters, startAfter(lastVisible));
     const documents = await getDocs(q);
     dispatch({ type: "success", payload: documents.docs });
   };
 
   const previousPage = async () => {
-    const q = query(
-      noticesCollection,
-      ...filters,
-      endAt(firstVisible),
-      limit(pageSize)
-    );
+    const q = query(noticesCollection, ...filters, endAt(firstVisible));
     const documents = await getDocs(q);
     dispatch({ type: "success", payload: documents.docs });
   };
@@ -103,8 +94,6 @@ function App() {
     filterLoad();
   }, [debouncedInput]);
 
-  // add test to UI components - test if callbacks are correctly called
-  // check that props were correctly used
   if (error) {
     return (
       <div>
@@ -114,17 +103,13 @@ function App() {
     );
   }
 
-  // use material UI to have something more beautiful
   return (
-    <div>
+    <Container maxWidth="xl">
       <PublishedNotices
         state={state}
         onSearchChange={(value) => dispatch({ type: "input", payload: value })}
       />
-
-      <div onClick={() => previousPage()}>Less...</div>
-      <div onClick={() => nextPage()}>More...</div>
-    </div>
+    </Container>
   );
 }
 
