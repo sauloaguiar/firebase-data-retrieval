@@ -12,8 +12,19 @@ import {
   endAt,
 } from "firebase/firestore";
 import { useDebounce } from "use-debounce";
+import { ErrorBoundary } from "react-error-boundary";
 
 const noticesCollection = collection(db, "notices");
+
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div role="alert">
+      <p>Something went wrong:</p>
+      <pre style={{ color: "red" }}>{error.message}</pre>
+      <button onClick={resetErrorBoundary}>Try again</button>
+    </div>
+  );
+}
 
 function SearchBar({ filterText, onChange }) {
   return (
@@ -38,13 +49,6 @@ function NoticeRow({ notice }) {
 }
 
 function NoticeTable({ notices, status }) {
-  if (status === "error") {
-    return (
-      <div>
-        <p>Oops, something went wrong.</p>
-      </div>
-    );
-  }
   if (status === "loading") {
     return (
       <div>
@@ -77,7 +81,12 @@ function PublishedNotices({ state, onSearchChange }) {
   return (
     <main>
       <SearchBar filterText={state.searchText} onChange={onSearchChange} />
-      <NoticeTable notices={state.notices} status={status} />
+      <ErrorBoundary
+        FallbackComponent={ErrorFallback}
+        onReset={() => onSearchChange("")}
+      >
+        <NoticeTable notices={state.notices} status={status} />
+      </ErrorBoundary>
     </main>
   );
 }
@@ -125,7 +134,7 @@ const initialNoticeScreenState = {
 
 function App() {
   const [state, dispatch] = useReducer(noticeReducer, initialNoticeScreenState);
-  const { input, pageSize, lastVisible, firstVisible } = state;
+  const { input, pageSize, lastVisible, firstVisible, error } = state;
   const [debouncedInput] = useDebounce(input, 500);
   const filters = [
     where("title", ">=", debouncedInput),
@@ -140,7 +149,6 @@ function App() {
       dispatch({ type: "success", payload: documents.docs });
     } catch (error) {
       dispatch({ type: "error", error });
-      throw new Error(error);
     }
   };
 
@@ -170,6 +178,18 @@ function App() {
     filterLoad();
   }, [debouncedInput]);
 
+  // add test to UI components - test if callbacks are correctly called
+  // check that props were correctly used
+  if (error) {
+    return (
+      <div>
+        <p>Oops, something went wrong.</p>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
+  // use material UI to have something more beautiful
   return (
     <div>
       <PublishedNotices
