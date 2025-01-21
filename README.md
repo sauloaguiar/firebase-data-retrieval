@@ -13,7 +13,7 @@ I'm happy to address any questions that might rise during the review.
 Thanks again!
 
 
-# Column Frontend Exercise
+# Frontend Exercise
 
 Your task is to create a public notice search application using React. The application should allow users to search for a notice by title and display relevant information. The primary goal is to demonstrate your proficiency in React, state management, and asynchronous data fetching via Firestore.
 
@@ -72,8 +72,4 @@ Using any development environment you are comfortable with, complete the require
 - [ ] Add a filter to search by date of publication
 - [ ] Add routing to view a single notice
 - [ ] Add a form to add new notices with a title, publication date, and content
-
-## Submission
-
-When you have completed the exercise, please provide a link to view or download your repository in reply to Monique. If you have any questions or need clarification on the requirements, please reach out to your contact at Column.
 
